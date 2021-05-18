@@ -1,0 +1,289 @@
+##Project
+##Predict the CLV of an Auto Insurance Company
+
+library(boot)
+library(car)
+library(QuantPsyc)
+library(lmtest)
+library(sandwich)
+library(vars)
+library(nortest)
+library(MASS)
+
+setwd("E:\\Data Analytics\\Ivy\\R\\Project")
+
+data<- read.csv("Fn-UseC_-Marketing-Customer-Value-Analysis.csv")
+str(data)
+summary(data)
+
+#converting data types of the necessary variables
+data$Number.of.Policies <- as.factor(data$Number.of.Policies)
+data$Number.of.Open.Complaints <- as.factor(data$Number.of.Open.Complaints)
+
+str(data)
+
+#Outlier checking
+boxplot(data$Customer.Lifetime.Value)
+quantile(data$Customer.Lifetime.Value , c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,1))
+data1 <- data[data$Customer.Lifetime.Value < 35971,]
+boxplot(data1$Customer.Lifetime.Value)
+quantile(data1$Customer.Lifetime.Value , c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,1))
+data1 <- data[data$Customer.Lifetime.Value < 25030,]
+boxplot(data1$Customer.Lifetime.Value)
+quantile(data1$Customer.Lifetime.Value , c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,1))
+data1 <- data[data$Customer.Lifetime.Value < 20495,]
+boxplot(data1$Customer.Lifetime.Value)
+quantile(data1$Customer.Lifetime.Value , c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,1))
+data1 <- data[data$Customer.Lifetime.Value < 16980,]
+boxplot(data1$Customer.Lifetime.Value)
+quantile(data1$Customer.Lifetime.Value , c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,1))
+data1 <- data[data$Customer.Lifetime.Value < 15020,]
+boxplot(data1$Customer.Lifetime.Value)
+((nrow(data)-nrow(data1))/nrow(data))*100 #this percentage of data is removed from the given dataset
+
+
+boxplot(data1$Income)
+
+boxplot(data1$Monthly.Premium.Auto)
+quantile(data1$Monthly.Premium.Auto, c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,1))
+data2 <- data1[data1$Monthly.Premium.Auto<181,]
+boxplot(data2$Monthly.Premium.Auto)
+quantile(data2$Monthly.Premium.Auto, c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,0.995,1))
+data2 <- data2[data2$Monthly.Premium.Auto<165,]
+boxplot(data2$Monthly.Premium.Auto)
+((nrow(data)-nrow(data2))/nrow(data))*100 #this percentage of data is removed from the given dataset
+
+boxplot(data2$Total.Claim.Amount)
+quantile(data2$Total.Claim.Amount, c(0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.99,1))
+data3 <- data2[data2$Total.Claim.Amount < 1124,]
+boxplot(data3$Total.Claim.Amount)
+quantile(data3$Total.Claim.Amount ,c(0,0.05,0.1,0.25,0.5,0.75,0.9,0.95,0.975,0.985,0.99,1))
+data3 <- data3[data3$Total.Claim.Amount<970,]
+boxplot(data3$Total.Claim.Amount)
+
+((nrow(data)-nrow(data3))/nrow(data))*100 #this percentage of data is removed from the given dataset
+
+data <- data3
+
+## Check the missing value (if any)
+sapply(data, function(x) sum(is.na(x)))
+
+names(data)
+
+#Start Linear Modeling by removing variable Customer , Effective.To.Date
+
+fit<- lm(Customer.Lifetime.Value ~ State+Response+Coverage+Education+EmploymentStatus+
+           Gender+Income+Location.Code+Marital.Status+Monthly.Premium.Auto+Months.Since.Last.Claim
+         +Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable State
+fit<- lm(Customer.Lifetime.Value ~ Response+Coverage+Education+EmploymentStatus+
+           Gender+Income+Location.Code+Marital.Status+Monthly.Premium.Auto+Months.Since.Last.Claim
+         +Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Response
+fit<- lm(Customer.Lifetime.Value ~ Coverage+Education+EmploymentStatus+
+           Gender+Income+Location.Code+Marital.Status+Monthly.Premium.Auto+Months.Since.Last.Claim
+         +Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Coverage
+fit<- lm(Customer.Lifetime.Value ~ Education+EmploymentStatus+
+           Gender+Income+Location.Code+Marital.Status+Monthly.Premium.Auto+Months.Since.Last.Claim
+         +Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#Including some categories of EmploymentStatus
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Location.Code+Marital.Status+Monthly.Premium.Auto+Months.Since.Last.Claim
+         +Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Location.Code
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+Months.Since.Last.Claim
+         +Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Months.Since.Last.Claim
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+         Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+Policy.Type+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#Including some categories of Policy.Type
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           Policy+Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Policy
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           Renew.Offer.Type+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#Including some categories of Policy.Type
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           I(Renew.Offer.Type == "Offer2")+Sales.Channel+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Sales.Channel
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           I(Renew.Offer.Type == "Offer2")+Total.Claim.Amount+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Total.Claim.Amount
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           I(Renew.Offer.Type == "Offer2")+Vehicle.Class+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Vehicle.Class
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           I(Renew.Offer.Type == "Offer2")+Vehicle.Size, data=data)
+summary(fit)
+
+#removing the variable Vehicle.Size
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+I(Policy.Type == "Personal Auto")+
+           I(Renew.Offer.Type == "Offer2"), data=data)
+summary(fit)
+
+#removing the variable Policy.Type
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Months.Since.Policy.Inception+Number.of.Open.Complaints+Number.of.Policies+
+           I(Renew.Offer.Type == "Offer2"), data=data)
+summary(fit)
+
+
+#removing the variable Months.Since.Policy.Inception
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           Number.of.Open.Complaints+Number.of.Policies, data=data)
+summary(fit)
+
+#including some of the variables of Number.of.Open.Complaints
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Employed")+I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           I(Number.of.Open.Complaints == 3)+I(Number.of.Open.Complaints == 4)+
+           I(Number.of.Open.Complaints == 5)+Number.of.Policies, data=data)
+summary(fit)
+
+#Check Vif, vif>2 means presence of multicollinearity
+vif(fit)
+
+
+#removing variable
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           I(EmploymentStatus == "Unemployed")+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           I(Number.of.Open.Complaints == 3)+I(Number.of.Open.Complaints == 4)+
+           I(Number.of.Open.Complaints == 5)+Number.of.Policies, data=data)
+summary(fit)
+
+vif(fit)
+
+#removing variable
+#FINAL MODEL
+fit<- lm(Customer.Lifetime.Value ~ Education+
+           Gender+Income+Marital.Status+Monthly.Premium.Auto+
+           I(Number.of.Open.Complaints == 3)+I(Number.of.Open.Complaints == 4)+
+           I(Number.of.Open.Complaints == 5)+Number.of.Policies, data=data)
+summary(fit)
+
+vif(fit)
+
+## Get the predicted or fitted values
+fitted(fit)
+
+## MAPE
+data$pred <- fitted(fit)
+
+#Calculating MAPE
+attach(data)
+(sum((abs(Customer.Lifetime.Value-pred))/Customer.Lifetime.Value))/nrow(data)
+
+
+##################################### Checking of Assumption ############################################
+
+# residuals should be uncorrelated ##Autocorrelation
+# Null H0: residuals from a linear regression are uncorrelated. Value should be close to 2. 
+#Less than 1 and greater than 3 -> concern
+## Should get a high p value
+
+dwt(fit)
+
+# Checking multicollinearity
+vif(fit) # should be within 2. If it is greater than 10 then serious problem
+
+################ Constant error variance ##########Heteroscedasticity
+
+
+# Breusch-Pagan test
+bptest(fit)  # Null hypothesis -> error is homogenious (p value should be more than 0.05)
+
+
+
+## Normality testing Null hypothesis is data is normal.
+
+resids <- fit$residuals
+
+
+ad.test(resids) #get Anderson-Darling test for normality 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
